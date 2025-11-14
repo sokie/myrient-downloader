@@ -226,14 +226,19 @@ class DownloadService {
               fileIndex: fileIndex,
               success: true
             });
+
+            // Resolve immediately so worker can start next download
+            // File write continues in background
+            resolve();
           });
 
           writer.on('finish', () => {
-            // File write completed successfully
-            resolve();
+            // File write completed successfully (happens after resolve)
           });
           writer.on('error', (err) => {
-            reject(err);
+            // Note: If write error occurs after stream.on('end'), we won't catch it
+            // This is a trade-off for allowing parallel downloads to network drives
+            this.downloadConsole.logError(`Write error for ${filename}: ${err.message}`);
           });
           stream.on('error', (err) => {
             if (this.isCancelled()) {
