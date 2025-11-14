@@ -209,9 +209,27 @@ class DownloadService {
 
           stream.on('end', () => {
             writer.end();
+
+            // Send UI updates immediately when download completes
+            // This prevents UI from being blocked when writing to slow network drives
+            win.webContents.send('download-file-progress', {
+              name: filename,
+              fileIndex: fileIndex,
+              current: fileSize,
+              total: fileSize,
+              currentFileIndex: initialSkippedFileCount + fileIndex + 1,
+              totalFilesToDownload: totalFilesOverall
+            });
+
+            win.webContents.send('download-file-finished', {
+              name: filename,
+              fileIndex: fileIndex,
+              success: true
+            });
           });
 
           writer.on('finish', () => {
+            // File write completed successfully
             resolve();
           });
           writer.on('error', (err) => {
@@ -224,12 +242,6 @@ class DownloadService {
               reject(err);
             }
           });
-        });
-
-        win.webContents.send('download-file-finished', {
-          name: filename,
-          fileIndex: fileIndex,
-          success: true
         });
 
       } catch (e) {
